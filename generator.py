@@ -6,11 +6,13 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from diffusers import AutoPipelineForText2Image
+from diffusers import AutoPipelineForText2Image, OnnxStableDiffusionXLPipeline
 from PIL import ImageOps
 
 
+
 logger = logging.getLogger(__name__)
+ main
 
 
 def _prepare_output_path(output_dir: str, theme: str, suffix: str) -> str:
@@ -42,17 +44,19 @@ def generate_image(
 ) -> tuple[str, str]:
     os.makedirs(output_dir, exist_ok=True)
 
+    runtime = _detect_environment(config)
     model_id = config.get("model_name", "stabilityai/sd-turbo")
-    steps = int(config.get("num_inference_steps", 3))
-    steps = max(1, min(6, steps))
+    requested_steps = int(config.get("num_inference_steps", 3))
+    steps = _inference_steps(runtime, requested_steps)
     guidance_scale = float(config.get("guidance_scale", 1.8))
     negative_prompt = config.get(
         "negative_prompt",
         "low quality, blurry, distortions, watermark, text, color, nsfw",
     )
-    device = config.get("device") or ("cuda" if torch.cuda.is_available() else "cpu")
+    device = "cuda" if runtime["mode"].startswith("torch") else "cpu"
     seed = config.get("seed")
     lora_path = config.get("lora_path") if config.get("use_lora") else None
+
 
     torch_dtype = torch.float16 if device == "cuda" else torch.float32
     pipe = _initialize_pipeline(
@@ -143,9 +147,12 @@ def _initialize_pipeline(
             pipe.fuse_lora(lora_scale=1.0)
         except Exception as exc:
             logger.warning("LoRA のロードに失敗しました: %s", exc)
+ main
 
     return pipe
 
+
+ main
 
 def generate_sketch(text: str, output_path: Path) -> Path:
     """Generate a monochrome sketch image and save to the given path."""
