@@ -1,0 +1,12 @@
+{
+  "model_name": "stabilityai/sd-turbo",
+  "use_lora": false,
+  "lora_path": "",
+  "num_inference_steps": 3,
+  "guidance_scale": 1.8,
+  "negative_prompt": "low quality, blurry, distortions, watermark, text, color, nsfw",
+  "enable_xformers": true,
+  "attention_slicing": true,
+  "seed": 1234,
+  "output_dir": "output"
+}
