@@ -51,23 +51,33 @@ pip install -r requirements.txt
 ## 使い方（CLI）
 ### 直接実行
 ```bash
-python main.py "夜の街を走るスケーター"
+python main.py --prompt "夜の街を走るスケーター"
 ```
-テーマを省略するとプロンプトが表示され、対話的に入力できます。
+`--prompt` を省略すると対話的に入力できます。出力先を省略すると `output/` 配下に
+`<タイムスタンプ>_<プロンプト一部>_sketch.png` の形式で自動保存します。
+
+主なオプション:
+
+| オプション | 説明 |
+| --- | --- |
+| `--prompt` / `-p` | 生成に使うプロンプト。未指定時は対話入力。 |
+| `--output` / `-o` | 保存先ファイルパス (PNG)。未指定で自動命名。 |
+| `--model` / `-m` | 使用するモデル ID。デフォルトは `stabilityai/sd-turbo`。 |
+| `--device` / `-d` | `cuda`/`cpu` など使用デバイスを固定したい場合に指定。 |
+| `--steps` | 拡散のステップ数 (1-6)。 |
+| `--guidance` | ガイダンススケール。SD Turbo は 0-2 付近が推奨。 |
 
 ### start.bat（Windows 一発起動）
 `start.bat` をダブルクリックすると、仮想環境 `.venv` を自動作成し、依存関係をインストールした上で `main.py` を実行します。引数を付ける場合はショートカットの「リンク先」に追記してください。
 
 例:
 ```
-start.bat "雨上がりの路地を歩く少年"
+start.bat --prompt "雨上がりの路地を歩く少年"
 ```
 
 ## 出力物
-`output/` フォルダに以下が保存されます（タイムスタンプ＋テーマ名で自動命名）。
-- 構図案テキスト: `*_composition.txt`
-- 白黒ラフ画像 (PNG): `*_rough.png`
-- 使用プロンプトログ: `*_prompt.txt`
+`output/` フォルダに以下が保存されます（タイムスタンプ＋プロンプトを含む自動命名）。
+- 白黒ラフ画像 (PNG): `*_sketch.png`
 
 ## VRAM が足りない場合
 - `num_inference_steps` を 1〜2 に下げる
@@ -76,8 +86,8 @@ start.bat "雨上がりの路地を歩く少年"
 - CPU 実行も可能ですが大幅に遅くなります。CUDA ドライバと xformers が有効な環境を推奨
 
 ## ファイル構成
-- `main.py`: CLI 本体。テーマ受け取り、構図案生成、画像生成の呼び出し
-- `compose.py`: テーマから構図案テキストを作成
+- `main.py`: CLI 本体。プロンプト受け取りと画像生成の呼び出し
+- `compose.py`: （参考）テーマから構図案テキストを作成するサンプル
 - `generator.py`: diffusers で 512x512 の白黒ラフ画像を生成。xformers/LoRA対応
 - `config.json`: 設定ファイル
 - `requirements.txt`: 依存関係
