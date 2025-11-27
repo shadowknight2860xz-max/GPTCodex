@@ -1,5 +1,5 @@
-import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import torch
@@ -7,11 +7,38 @@ from diffusers import AutoPipelineForText2Image
 from PIL import ImageOps
 
 
-def _prepare_output_path(output_dir: str, theme: str, suffix: str) -> str:
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    safe_theme = theme.replace(" ", "_").replace("/", "-")
-    filename = f"{timestamp}_{safe_theme}_{suffix}"
-    return os.path.join(output_dir, filename)
+def _sanitize_theme(theme: str) -> str:
+    return theme.replace(" ", "_").replace("/", "-")
+
+
+def _ensure_unique_path(path: Path, overwrite: bool) -> Path:
+    if overwrite or not path.exists():
+        return path
+
+    counter = 1
+    while True:
+        candidate = path.with_stem(f"{path.stem}_{counter}")
+        if not candidate.exists():
+            return candidate
+        counter += 1
+
+
+def build_output_path(
+    output_dir: Path | str,
+    theme: str,
+    suffix: str,
+    *,
+    overwrite: bool = False,
+    timestamp: str | None = None,
+) -> Path:
+    base_dir = Path(output_dir or Path("output"))
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    stamp = timestamp or datetime.now().strftime("%Y%m%d-%H%M%S")
+    safe_theme = _sanitize_theme(theme)
+    filename = f"{stamp}_{safe_theme}_{suffix}"
+    path = base_dir / filename
+    return _ensure_unique_path(path, overwrite)
 
 
 def build_prompt(theme: str, composition: str) -> str:
@@ -20,9 +47,16 @@ def build_prompt(theme: str, composition: str) -> str:
 
 
 def generate_image(
-    *, theme: str, composition: str, config: dict[str, Any], output_dir: str
+    *,
+    theme: str,
+    composition: str,
+    config: dict[str, Any],
+    output_dir: Path | str | None,
+    overwrite: bool = False,
+    timestamp: str | None = None,
 ) -> tuple[str, str]:
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = Path(output_dir or Path("output"))
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     model_id = config.get("model_name", "stabilityai/sd-turbo")
     steps = int(config.get("num_inference_steps", 3))
@@ -81,17 +115,22 @@ def generate_image(
     image = result.images[0]
     grayscale = ImageOps.grayscale(image)
 
-    image_path = _prepare_output_path(output_dir, theme, "rough.png")
+    stamp = timestamp or datetime.now().strftime("%Y%m%d-%H%M%S")
+    image_path = build_output_path(
+        output_dir, theme, "rough.png", overwrite=overwrite, timestamp=stamp
+    )
     grayscale.save(image_path)
 
-    prompt_log = _prepare_output_path(output_dir, theme, "prompt.txt")
+    prompt_log = build_output_path(
+        output_dir, theme, "prompt.txt", overwrite=overwrite, timestamp=stamp
+    )
     with open(prompt_log, "w", encoding="utf-8") as f:
         f.write("# positive\n")
         f.write(prompt + "\n")
         f.write("\n# negative\n")
         f.write(negative_prompt + "\n")
 
-    return image_path, prompt_log
+    return str(image_path), str(prompt_log)
 
 
-__all__ = ["generate_image", "build_prompt"]
+__all__ = ["generate_image", "build_prompt", "build_output_path"]
