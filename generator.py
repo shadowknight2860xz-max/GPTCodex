@@ -1,6 +1,7 @@
 import os
+import re
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 import torch
 from diffusers import AutoPipelineForText2Image
@@ -12,6 +13,11 @@ def _prepare_output_path(output_dir: str, theme: str, suffix: str) -> str:
     safe_theme = theme.replace(" ", "_").replace("/", "-")
     filename = f"{timestamp}_{safe_theme}_{suffix}"
     return os.path.join(output_dir, filename)
+
+
+def _sanitize_filename(text: str, fallback: str = "sketch") -> str:
+    name = re.sub(r"[^0-9A-Za-z_-]+", "_", text).strip(" _")
+    return name or fallback
 
 
 def build_prompt(theme: str, composition: str) -> str:
@@ -94,4 +100,61 @@ def generate_image(
     return image_path, prompt_log
 
 
-__all__ = ["generate_image", "build_prompt"]
+def generate_sketch(
+    prompt: str,
+    output_path: str,
+    *,
+    model: Optional[str] = None,
+    device: Optional[str] = None,
+    num_inference_steps: int = 3,
+    guidance_scale: float = 1.8,
+    enable_xformers: bool = True,
+    attention_slicing: bool = True,
+) -> str:
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+
+    model_id = model or "stabilityai/sd-turbo"
+    device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+
+    steps = max(1, min(6, int(num_inference_steps)))
+    torch_dtype = torch.float16 if device == "cuda" else torch.float32
+
+    pipe = AutoPipelineForText2Image.from_pretrained(
+        model_id,
+        torch_dtype=torch_dtype,
+        use_safetensors=True,
+        variant="fp16" if torch_dtype == torch.float16 else None,
+    )
+
+    pipe.scheduler = pipe.scheduler.__class__.from_config(pipe.scheduler.config)
+    pipe = pipe.to(device)
+
+    if enable_xformers:
+        try:
+            pipe.enable_xformers_memory_efficient_attention()
+        except Exception:
+            print("xformers が見つからないため通常の注意機構を使用します。")
+
+    if attention_slicing:
+        pipe.enable_attention_slicing()
+
+    negative_prompt = "low quality, blurry, distortions, watermark, text, color, nsfw"
+
+    with torch.autocast(device_type=device, dtype=torch_dtype):
+        result = pipe(
+            prompt,
+            negative_prompt=negative_prompt,
+            num_inference_steps=steps,
+            guidance_scale=guidance_scale,
+            height=512,
+            width=512,
+        )
+
+    image = result.images[0]
+    grayscale = ImageOps.grayscale(image)
+    grayscale.save(output_path)
+
+    return output_path
+
+
+__all__ = ["generate_image", "build_prompt", "generate_sketch", "_sanitize_filename"]
