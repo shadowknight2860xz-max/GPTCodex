@@ -1,9 +1,11 @@
 import logging
 import os
+
 from contextlib import nullcontext
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+main
 
 import torch
 from diffusers import AutoPipelineForText2Image, OnnxStableDiffusionXLPipeline
@@ -22,6 +24,7 @@ def _prepare_output_path(output_dir: str, theme: str, suffix: str) -> str:
     return os.path.join(output_dir, filename)
 
 
+
 def _save_grayscale_image(image, path: Path) -> Path:
     ext = path.suffix.lower()
     if ext not in {".png", ".jpg", ".jpeg"}:
@@ -32,6 +35,7 @@ def _save_grayscale_image(image, path: Path) -> Path:
     image_format = "PNG" if ext == ".png" else "JPEG"
     grayscale.save(path, format=image_format)
     return path
+ main
 
 
 def build_prompt(theme: str, composition: str) -> str:
@@ -179,6 +183,7 @@ def generate_sketch(text: str, output_path: Path) -> Path:
         else nullcontext()
     )
 
+
     try:
         with autocast_context:
             result = pipe(
@@ -198,3 +203,4 @@ def generate_sketch(text: str, output_path: Path) -> Path:
 
 
 __all__ = ["generate_image", "generate_sketch", "build_prompt"]
+ main

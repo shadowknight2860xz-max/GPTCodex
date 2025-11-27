@@ -1,56 +1,62 @@
 import argparse
-import json
 import os
 from datetime import datetime
 
-from compose import generate_composition
-from generator import generate_image
+from generator import generate_sketch, _sanitize_filename
 
 
-def load_config(path: str) -> dict:
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def save_text(content: str, output_dir: str, theme: str) -> str:
-    os.makedirs(output_dir, exist_ok=True)
+def _build_default_output_path(prompt: str) -> str:
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    safe_theme = theme.replace(" ", "_").replace("/", "-")
-    path = os.path.join(output_dir, f"{timestamp}_{safe_theme}_composition.txt")
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(content)
-    return path
+    safe_name = _sanitize_filename(prompt)
+    return os.path.join("output", f"{timestamp}_{safe_name}_sketch.png")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="構図提案つきネーム生成AI (CLI)")
-    parser.add_argument("theme", nargs="?", help="生成したいテーマ。未指定時は対話で入力。")
+    parser = argparse.ArgumentParser(description="ラフスケッチ生成 CLI")
     parser.add_argument(
-        "--config", default="config.json", help="設定ファイルのパス (JSON)"
+        "--prompt",
+        "-p",
+        help="生成に使うプロンプト。未指定時は対話で入力。",
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        help="保存先ファイルパス (PNG)。未指定で output/ 配下に自動保存。",
+    )
+    parser.add_argument("--model", "-m", help="使用するモデル ID", default=None)
+    parser.add_argument("--device", "-d", help="使用デバイス (cuda/cpu など)")
+    parser.add_argument(
+        "--steps",
+        type=int,
+        default=3,
+        help="拡散のステップ数 (1-6)。省メモリ環境では 1-2 を推奨。",
+    )
+    parser.add_argument(
+        "--guidance",
+        type=float,
+        default=1.8,
+        help="ガイダンススケール。SD Turbo は 0-2 付近が推奨。",
     )
     args = parser.parse_args()
 
-    if args.theme:
-        theme = args.theme
-    else:
-        theme = input("テーマを入力してください: ").strip()
-        if not theme:
-            raise SystemExit("テーマが入力されていません。")
+    prompt = args.prompt or input("プロンプトを入力してください: ").strip()
+    if not prompt:
+        raise SystemExit("プロンプトが入力されていません。")
 
-    config = load_config(args.config)
-    output_dir = config.get("output_dir", "output")
+    output_path = args.output or _build_default_output_path(prompt)
 
-    composition = generate_composition(theme, seed=config.get("seed"))
-    text_path = save_text(composition, output_dir, theme)
-
-    image_path, prompt_path = generate_image(
-        theme=theme, composition=composition, config=config, output_dir=output_dir
+    result_path = generate_sketch(
+        prompt=prompt,
+        output_path=output_path,
+        model=args.model,
+        device=args.device,
+        num_inference_steps=args.steps,
+        guidance_scale=args.guidance,
     )
 
     print("生成完了")
-    print(f"構図案: {text_path}")
-    print(f"画像: {image_path}")
-    print(f"プロンプトログ: {prompt_path}")
+    print(f"プロンプト: {prompt}")
+    print(f"保存先: {result_path}")
 
 
 if __name__ == "__main__":
