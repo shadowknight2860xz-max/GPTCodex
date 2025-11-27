@@ -1,0 +1,6 @@
+accelerate>=0.30.0
+safetensors>=0.4.2
+diffusers>=0.29.0
+transformers>=4.39.0
+xformers>=0.0.25.post1
+Pillow>=10.2.0
