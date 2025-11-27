@@ -1,7 +1,9 @@
+
 import logging
 import os
 
 from contextlib import nullcontext
+ main
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -22,6 +24,7 @@ def _prepare_output_path(output_dir: str, theme: str, suffix: str) -> str:
     safe_theme = theme.replace(" ", "_").replace("/", "-")
     filename = f"{timestamp}_{safe_theme}_{suffix}"
     return os.path.join(output_dir, filename)
+ main
 
 
 
@@ -44,9 +47,16 @@ def build_prompt(theme: str, composition: str) -> str:
 
 
 def generate_image(
-    *, theme: str, composition: str, config: dict[str, Any], output_dir: str
+    *,
+    theme: str,
+    composition: str,
+    config: dict[str, Any],
+    output_dir: Path | str | None,
+    overwrite: bool = False,
+    timestamp: str | None = None,
 ) -> tuple[str, str]:
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = Path(output_dir or Path("output"))
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     runtime = _detect_environment(config)
     model_id = config.get("model_name", "stabilityai/sd-turbo")
@@ -156,6 +166,7 @@ def _initialize_pipeline(
     return pipe
 
 
+
  main
 
 def generate_sketch(text: str, output_path: Path) -> Path:
@@ -203,4 +214,5 @@ def generate_sketch(text: str, output_path: Path) -> Path:
 
 
 __all__ = ["generate_image", "generate_sketch", "build_prompt"]
+ main
  main

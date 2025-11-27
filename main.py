@@ -1,6 +1,10 @@
 import argparse
+
 import os
+ main
 from datetime import datetime
+from pathlib import Path
+
 
 from generator import generate_sketch, _sanitize_filename
 
@@ -9,6 +13,7 @@ def _build_default_output_path(prompt: str) -> str:
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     safe_name = _sanitize_filename(prompt)
     return os.path.join("output", f"{timestamp}_{safe_name}_sketch.png")
+ main
 
 
 def main() -> None:
@@ -37,7 +42,13 @@ def main() -> None:
         default=1.8,
         help="ガイダンススケール。SD Turbo は 0-2 付近が推奨。",
     )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="同名ファイルが存在する場合に上書き保存します",
+    )
     args = parser.parse_args()
+
 
     prompt = args.prompt or input("プロンプトを入力してください: ").strip()
     if not prompt:
@@ -52,6 +63,7 @@ def main() -> None:
         device=args.device,
         num_inference_steps=args.steps,
         guidance_scale=args.guidance,
+ main
     )
 
     print("生成完了")
